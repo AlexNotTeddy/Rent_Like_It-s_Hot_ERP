@@ -1,0 +1,28 @@
+function creaPromemoriaReso() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Risposte del modulo");
+  const lastRow = sheet.getLastRow();
+  const calendar = CalendarApp.getDefaultCalendar(); // Usa il calendario predefinito
+  
+  // Scansiona tutte le righe per trovare nuove date in colonna W
+  for (let row = 2; row <= lastRow; row++) { // Salta l'intestazione
+    const resoDate = sheet.getRange(row, 23).getValue(); // Colonna W
+    const fullName = sheet.getRange(row, 3).getValue(); // Nome completo in colonna C
+    
+    // Se W contiene una data valida e non abbiamo ancora creato un evento
+    if (resoDate instanceof Date && !sheet.getRange(row, 24).getValue()) { // Colonna X come flag
+      const eventTitle = `Reso del prodotto di ${fullName}`;
+      
+      // Crea l'evento su Google Calendar con colore giallo
+      const event = calendar.createAllDayEvent(eventTitle, resoDate, {
+        description: `Promemoria per il reso del prodotto da parte di ${fullName}`,
+      });
+
+      // Imposta il colore dell'evento su giallo (ID colore "11")
+      event.setColor("11");
+
+      // Aggiungi una notifica per il giorno prima
+      event.addEmailReminder(24 * 60); // Notifica 24 ore prima (in minuti)
+      
+    }
+  }
+}
