@@ -1,0 +1,54 @@
+function aggiornaNoleggioCauzione() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const responseSheet = spreadsheet.getSheetByName("Risposte del modulo");
+  const catalogSheet = spreadsheet.getSheetByName("Catalogo per script");
+
+  if (!responseSheet || !catalogSheet) {
+    console.log("Errore: uno dei fogli non esiste.");
+    return;
+  }
+
+  const responses = responseSheet.getDataRange().getValues();
+  const catalogData = catalogSheet.getDataRange().getValues();
+  const lastRow = responseSheet.getLastRow();
+
+  if (lastRow <= 1) {
+    console.log("Errore: non ci sono risposte sufficienti nel foglio.");
+    return;
+  }
+
+  const productCode = responses[lastRow - 1][5];
+  const rentalPackage = responses[lastRow - 1][6];
+
+  let productName = '';
+  let rentalPrice = 0;
+  let depositAmount = 0;
+  let productLink = '';
+
+  for (let i = 1; i < catalogData.length; i++) {
+    if (catalogData[i][12] == productCode) {
+      productName = catalogData[i][3];
+      if (rentalPackage === '1 Week') {
+        rentalPrice = catalogData[i][6];
+        depositAmount = catalogData[i][7];
+      } else if (rentalPackage === '2 Week') {
+        rentalPrice = catalogData[i][8];
+        depositAmount = catalogData[i][9];
+      }
+      productLink = catalogData[i][10];
+      break;
+    }
+  }
+
+  if (productName && rentalPrice && depositAmount && productLink) {
+    responseSheet.getRange(lastRow, 11).setValue(productName).setWrap(true);
+    responseSheet.getRange(lastRow, 12).setValue(rentalPrice).setNumberFormat('€ #,##0.00');
+    responseSheet.getRange(lastRow, 13).setValue(depositAmount).setNumberFormat('€ #,##0.00');
+    responseSheet.getRange(lastRow, 14).setValue(productLink);
+
+    const eventId = ("000" + (lastRow - 1)).slice(-3);
+    responseSheet.getRange(lastRow, 24).setValue(eventId);
+  } else {
+    console.log("Errore: Prodotto o dati mancanti nel catalogo per il codice prodotto:", productCode);
+  }
+}
