@@ -1,0 +1,71 @@
+function onFormSubmit(e) {
+  // ID del modello di Google Docs e cartella di destinazione
+  const templateId = '1TU9b0Ldz2oVlBlk4OlG6-fRNLfoe259IMWoGZRUbpcY';
+  const folderId = '1orBnds_k-4t1RmOAH39gB-MPs7ip_yLz';
+
+  // Ottieni il foglio delle risposte e i dati dell'ultima riga
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Risposte del modulo");
+  const lastRow = sheet.getLastRow();
+  const rowData = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // Estrai i dati dall'ultima riga e rimuovi eventuali spazi vuoti
+  const email = rowData[1].trim(); // Indirizzo email (colonna B)
+  Logger.log(`Retrieved email: ${email}`); // Log email for debugging
+  
+  if (!email || email.indexOf('@') === -1) {
+    Logger.log("Invalid email address. Script will not proceed.");
+    return; // Exit function if email is invalid
+  }
+
+  const fullName = rowData[2].trim(); // Nome completo (colonna C)
+  const prefix = rowData[3].trim(); // Prefisso (colonna D)
+  const phoneNumber = rowData[4].trim(); // Numero di Telefono (colonna E)
+  const productCode = rowData[5].trim(); // Codice prodotto (colonna F)
+  const rentalPackage = rowData[6].trim(); // Pacchetto di noleggio (colonna G)
+  const rentalStartDate = rowData[7].trim(); // Data di inizio noleggio (colonna H)
+  const digitalSignatur = rowData[9].trim(); // Firma digitale
+  const productName = rowData[10].trim(); // Nome prodotto (colonna J)
+  const rentalPrice = parseFloat(rowData[11]); // Prezzo Noleggi (colonna L)
+  const depositAmount = parseFloat(rowData[12]); // Cauzione (colonna M)
+
+  // Link PayPal da usare nel contratto
+  const paypalLink = "https://paypal.me/RLIHMilano?country.x=IT&locale.x=it_IT";
+
+  // Crea una copia del template per l'Utilizzatore
+  const folder = DriveApp.getFolderById(folderId);
+  const templateFile = DriveApp.getFileById(templateId);
+  const newDoc = templateFile.makeCopy(`Contratto - ${fullName}`, folder);
+  const newDocId = newDoc.getId();
+
+  // Apri il documento e ottieni il corpo
+  const doc = DocumentApp.openById(newDocId);
+  const body = doc.getBody();
+
+  // Sostituisci i segnaposto nel modello con i dati dell'Utilizzatore
+  body.replaceText('{{Nome Completo}}', fullName);
+  body.replaceText('{{Prefisso}}', prefix);
+  body.replaceText('{{Numero di Telefono}}', phoneNumber);
+  body.replaceText('{{Nome prodotto}}', productName);
+  body.replaceText('{{Codice prodotto}}', productCode);
+  body.replaceText('{{Pacchetto}}', rentalPackage);
+  body.replaceText('{{Data di inizio noleggio}}', Utilities.formatDate(new Date(rentalStartDate), Session.getScriptTimeZone(), "dd MMMM yyyy"));
+  body.replaceText('{{Importo Noleggio}}', rentalPrice.toFixed(2)); // Prezzo formattato
+  body.replaceText('{{Cauzione}}', depositAmount.toFixed(2)); // Cauzione formattata
+  body.replaceText('{{Link Paypal}}', paypalLink);
+  body.replaceText('{{Firma Digitale}}', digitalSignatur);
+  
+  // Salva e chiudi il documento
+  doc.saveAndClose();
+  const docUrl = newDoc.getUrl();
+
+  // Invia l'email al cliente con il link al contratto
+  const subjectCliente = 'Your Rental Contract';
+  const subjectNewRental = `New order from ${fullName}`;
+
+  const messageCliente = `Dear ${fullName},\n\nPlease find your rental contract at the following link:\n${docUrl}\n\nPlease note that the deposit amount will be refunded at the end of the rental period, upon verification of the product's condition.\n\nYou can make the necessary payments via PayPal here:\n${paypalLink}\n\nBest regards,\n\nThe RLIH Team`;
+  const messageNewRental = `New order from ${fullName},\n\nPlease find the rental contract at the following link:\n${docUrl}`;
+
+  const emailRLIH = 'rlih4community@gmail.com';
+  MailApp.sendEmail(email, subjectCliente, messageCliente);
+  MailApp.sendEmail(emailRLIH, subjectNewRental, messageNewRental);
+}
